@@ -3,6 +3,6 @@ from fastapi import FastAPI
 app = FastAPI()
 
 
-@app.get("/")
+@app.get("/v1/drop")
 async def root():
     return {"message": "Hello World"}
