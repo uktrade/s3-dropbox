@@ -1,6 +1,8 @@
 # s3-dropbox [![Proof](https://github.com/uktrade/s3-dropbox/actions/workflows/test.yml/badge.svg)](https://github.com/uktrade/s3-dropbox/actions/workflows/test.yml)
 
-A simple bearer token authenticated dropbox that drops its payloads into an S3 bucket
+A bearer token authenticated dropbox that drops its payloads into an S3 bucket.
+
+This is a simple application: it is for fairly low concurrency situations, and an additional layer of security in front is expected to run in front of this application, for example an IP address filter.
 
 
 ## Running tests
