@@ -2,7 +2,7 @@
 
 A bearer token authenticated dropbox that drops its payloads into an S3 bucket.
 
-This is a simple application: it is for fairly low concurrency situations, and many use cases would require an additional layer of security, for example an IP address filter, to run in front of this.
+This is a simple application: it is for fairly low concurrency situations, and many use cases would require an additional layer of security, for example an IP address filter, to run in front of this. Payload are expected to be small: streaming is not used.
 
 
 ## Running tests
