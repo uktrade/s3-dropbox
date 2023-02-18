@@ -19,4 +19,6 @@ jobs:
       - name: "Test"
         run: |
           pip install -r requirements-dev.txt
+          ./start-services.sh
           pytest
+          ./stop-services.sh
