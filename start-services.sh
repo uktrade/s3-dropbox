@@ -15,3 +15,12 @@ docker run --rm -p 9000:9000 --name s3-dropbox-minio -d \
   server
 
 timeout 60 bash -c 'until echo > /dev/tcp/127.0.0.1/9000; do sleep 5; done'
+
+docker run --rm \
+  --network=minio \
+  --entrypoint '' \
+  minio/mc \
+  sh -c '
+    mc alias set my-minio http://s3-dropbox-minio:9000/ AKIAIDIDIDIDIDIDIDID aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa &&
+    mc mb my-minio/my-bucket
+  '

@@ -28,7 +28,15 @@ def app() -> Generator[subprocess.Popen, None, None]:
         lines = [line.partition(':') for line in f.readlines()]
 
     command = next((command for (name, _, command) in lines if command if name == 'web'))
-    with subprocess.Popen(shlex.split(command), env={**os.environ, 'PORT': '8888'}) as p:
+    with subprocess.Popen(shlex.split(command), env={
+            **os.environ,
+            'PORT': '8888',
+            'S3_ENDPOINT_URL': 'http://127.0.0.1:9000/',
+            'AWS_ACCESS_KEY_ID': 'AKIAIDIDIDIDIDIDIDID',
+            'AWS_SECRET_ACCESS_KEY': 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+            'AWS_REGION': 'us-east-1',
+            'BUCKET': 'my-bucket',
+        }) as p:
         wait_until_connectable(p, 8888)
         yield p
         p.terminate()

@@ -33,6 +33,31 @@ pytest -s
 ````
 
 
+## Confguration
+
+Configuration is via environment variables
+
+### `PORT`
+
+The port the application listens to for HTTP requests
+
+### `BUCKET`
+
+The S3 bucket name to upload files to
+
+### `AWS_REGION`
+
+The region of the S3 bucket
+
+### `AWS_ACCESS_KEY_ID` & `AWS_SECRET_ACCESS_KEY`
+
+The access key used to authenticate with S3 to put objects. This must have `s3:PutObject` permissions
+
+### `S3_ENDPOINT_URL`
+
+The endpoint of S3 or the S3-compatible service. If using AWS S3, this is usually not required.
+
+
 ## Testing strategy
 
 The tests do not depend on what server is running, or even if the server is a Python. This is deliberate so another server could be swapped out, and if the tests pass, this would give confidence that there will be no user-facing break of behaviour.
