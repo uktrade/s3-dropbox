@@ -4,13 +4,14 @@ import subprocess
 import os
 import socket
 import time
+from typing import Generator
 
 import httpx
 import pytest
 
 
 @pytest.fixture
-def app():
+def app() -> Generator[subprocess.Popen, None, None]:
     def wait_until_connectable(p, port, max_attempts=1000):
         for i in range(0, max_attempts):
             try:
@@ -35,17 +36,18 @@ def app():
     p.kill()
 
 
-def test_empty_body(app) -> None:
+def test_empty_body(app: subprocess.Popen) -> None:
+    print(app)
     response = httpx.post('http://127.0.0.1:8888/v1/drop')
     assert response.status_code == 201
 
 
-def test_chunked(app) -> None:
+def test_chunked(app: subprocess.Popen) -> None:
     response = httpx.post('http://127.0.0.1:8888/v1/drop', content=(b'-' * 20000,))
     assert response.status_code == 411
 
 
-def test_bad_content_length(app) -> None:
+def test_bad_content_length(app: subprocess.Popen) -> None:
     # Most HTTP clients don't allow sending a non-integer content-length, so we
     # make the request manually
 
@@ -74,6 +76,6 @@ def test_bad_content_length(app) -> None:
     assert raw_response.startswith(b'HTTP/1.1 400 ')
 
 
-def test_too_large_body(app) -> None:
+def test_too_large_body(app: subprocess.Popen) -> None:
     response = httpx.post('http://127.0.0.1:8888/v1/drop', content=b'-' * 20000)
     assert response.status_code == 413
