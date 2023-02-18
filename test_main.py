@@ -46,7 +46,7 @@ def test_chunked(app: subprocess.Popen) -> None:
     assert response.status_code == 411
 
 
-def test_bad_content_length(app: subprocess.Popen) -> None:
+def test_non_integer_content_length(app: subprocess.Popen) -> None:
     # Most HTTP clients don't allow sending a non-integer content-length, so we
     # make the request manually
 
