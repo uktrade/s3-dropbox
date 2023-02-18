@@ -57,6 +57,10 @@ Configuration is via environment variables
 
   The endpoint of S3 or the S3-compatible service. If using AWS S3, this is usually not required.
 
+- `TOKEN`
+
+  The token that clients will pass in the authorization header in the format `authorization: Bearer <token>`
+
 
 ## Testing strategy
 

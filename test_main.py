@@ -36,6 +36,7 @@ def app() -> Generator[subprocess.Popen, None, None]:
             'AWS_SECRET_ACCESS_KEY': 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
             'AWS_REGION': 'us-east-1',
             'BUCKET': 'my-bucket',
+            'TOKEN': 'my-token',
         }) as p:
         wait_until_connectable(p, 8888)
         yield p
@@ -43,14 +44,28 @@ def app() -> Generator[subprocess.Popen, None, None]:
         p.wait(timeout=10)    
     p.kill()
 
+def test_no_auth(app: subprocess.Popen) -> None:
+    response = httpx.post('http://127.0.0.1:8888/v1/drop')
+    assert response.status_code == 401
+
+def test_no_bearer_auth(app: subprocess.Popen) -> None:
+    response = httpx.post('http://127.0.0.1:8888/v1/drop', headers={'authorization': 'my-token'})
+    assert response.status_code == 401
+
+def test_bad_bearer_auth(app: subprocess.Popen) -> None:
+    response = httpx.post('http://127.0.0.1:8888/v1/drop', headers={'authorization': 'Bearer not-my-token'})
+    assert response.status_code == 401
 
 def test_empty_body(app: subprocess.Popen) -> None:
-    response = httpx.post('http://127.0.0.1:8888/v1/drop')
+    response = httpx.post('http://127.0.0.1:8888/v1/drop', headers={'authorization': 'Bearer my-token'})
     assert response.status_code == 201
 
+def test_non_empty_body(app: subprocess.Popen) -> None:
+    response = httpx.post('http://127.0.0.1:8888/v1/drop', headers={'authorization': 'Bearer my-token'}, content=b'-')
+    assert response.status_code == 201
 
 def test_chunked(app: subprocess.Popen) -> None:
-    response = httpx.post('http://127.0.0.1:8888/v1/drop', content=(b'-' * 20000,))
+    response = httpx.post('http://127.0.0.1:8888/v1/drop', headers={'authorization': 'Bearer my-token'}, content=(b'-' * 20000,))
     assert response.status_code == 411
 
 
@@ -75,6 +90,7 @@ def test_non_integer_content_length(app: subprocess.Popen) -> None:
         sock.sendall(
             b'POST /v1/drop HTTP/1.1\r\n'
             b'host: example.com\r\n'
+            b'token: Bearer my-token\r\n'
             b'content-length: bad\r\n'
             b'\r\n'
         )
@@ -104,6 +120,7 @@ def test_lying_content_length(app: subprocess.Popen) -> None:
         sock.sendall(
             b'POST /v1/drop HTTP/1.1\r\n'
             b'host: example.com\r\n'
+            b'token: Bearer my-token\r\n'
             b'content-length: 3\r\n'
             b'\r\n'
             b'1234'
@@ -114,5 +131,5 @@ def test_lying_content_length(app: subprocess.Popen) -> None:
 
 
 def test_too_large_body(app: subprocess.Popen) -> None:
-    response = httpx.post('http://127.0.0.1:8888/v1/drop', content=b'-' * 20000)
+    response = httpx.post('http://127.0.0.1:8888/v1/drop', headers={'authorization': 'Bearer my-token'}, content=b'-' * 20000)
     assert response.status_code == 413

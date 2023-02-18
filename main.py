@@ -1,4 +1,5 @@
 import os
+import secrets
 from datetime import datetime
 from uuid import uuid4
 
@@ -8,6 +9,13 @@ from fastapi.responses import Response
 from starlette.concurrency import run_in_threadpool
 
 app = FastAPI()
+
+
+try:
+    token = os.environ['TOKEN']
+except KeyError:
+    raise KeyError('The TOKEN environment variable must be set to the Bearer token that will be used to authenticate requests')
+
 
 try:
     bucket = os.environ['BUCKET']
@@ -30,6 +38,18 @@ else:
 
 @app.post("/v1/drop")
 async def drop(request: Request) -> Response:
+    try:
+        auth = request.headers['Authorization']
+    except KeyError:
+        return Response(status_code=status.HTTP_401_UNAUTHORIZED, content='The authorization header must be present')
+
+    if not auth.startswith('Bearer '):
+        return Response(status_code=status.HTTP_401_UNAUTHORIZED, content='The authorization header must start with "Bearer "')
+
+    passed_token = auth.partition(' ')[2].strip()
+    if not secrets.compare_digest(passed_token, token):
+        return Response(status_code=status.HTTP_401_UNAUTHORIZED, content='The Bearer token is not correct')
+
     try:
         length = int(request.headers['content-length'])
     except KeyError:
