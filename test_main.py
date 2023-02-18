@@ -35,17 +35,17 @@ def app():
     p.kill()
 
 
-def test_empty_body(app):
+def test_empty_body(app) -> None:
     response = httpx.post('http://127.0.0.1:8888/v1/drop')
     assert response.status_code == 201
 
 
-def test_chunked(app):
+def test_chunked(app) -> None:
     response = httpx.post('http://127.0.0.1:8888/v1/drop', content=(b'-' * 20000,))
     assert response.status_code == 411
 
 
-def test_bad_content_length(app):
+def test_bad_content_length(app) -> None:
     # Most HTTP clients don't allow sending a non-integer content-length, so we
     # make the request manually
 
@@ -74,6 +74,6 @@ def test_bad_content_length(app):
     assert raw_response.startswith(b'HTTP/1.1 400 ')
 
 
-def test_too_large_body(app):
+def test_too_large_body(app) -> None:
     response = httpx.post('http://127.0.0.1:8888/v1/drop', content=b'-' * 20000)
     assert response.status_code == 413
