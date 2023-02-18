@@ -6,7 +6,7 @@ app = FastAPI()
 
 
 @app.post("/v1/drop")
-async def drop():
+async def drop() -> JSONResponse:
 
     def upload():
         pass
