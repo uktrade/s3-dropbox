@@ -22,6 +22,9 @@ jobs:
       - name: "Start minio"
         run: |
           ./start-services.sh
+      - name: "Type check"
+        run: |
+          mypy .
       - name: "Test"
         run: |
           pytest

@@ -5,13 +5,19 @@ A bearer token authenticated dropbox that drops its payloads into an S3 bucket.
 This is a simple application: it is for fairly low concurrency situations, and many use cases would require an additional layer of security, for example an IP address filter, to run in front of this. Payloads are expected to be small: streaming is not used.
 
 
-## Running tests
+## Running type checking and tests
 
 Python requirements must be installed and a local S3-like service started:
 
 ```bash
 pip install -r requirements-dev.txt
 ./start-services
+````
+
+Then to run type checking:
+
+```bash
+mypy .
 ````
 
 Then to run the tests:
