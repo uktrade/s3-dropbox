@@ -37,7 +37,6 @@ def app() -> Generator[subprocess.Popen, None, None]:
 
 
 def test_empty_body(app: subprocess.Popen) -> None:
-    print(app)
     response = httpx.post('http://127.0.0.1:8888/v1/drop')
     assert response.status_code == 201
 
