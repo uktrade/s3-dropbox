@@ -5,5 +5,5 @@ app = FastAPI()
 
 
 @app.get("/v1/drop")
-async def root():
+async def drop():
     return JSONResponse(status_code=status.HTTP_201_CREATED, content={"message": "Hello World"})
