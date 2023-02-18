@@ -37,25 +37,25 @@ pytest -s
 
 Configuration is via environment variables
 
-### `PORT`
+- `PORT`
 
-The port the application listens to for HTTP requests
+  The port the application listens to for HTTP requests
 
-### `BUCKET`
+- `BUCKET`
 
-The S3 bucket name to upload files to
+  The S3 bucket name to upload files to
 
-### `AWS_REGION`
+- `AWS_REGION`
 
-The region of the S3 bucket
+  The region of the S3 bucket
 
-### `AWS_ACCESS_KEY_ID` & `AWS_SECRET_ACCESS_KEY`
+- `AWS_ACCESS_KEY_ID` & `AWS_SECRET_ACCESS_KEY`
 
-The access key used to authenticate with S3 to put objects. This must have `s3:PutObject` permissions
+  The access key used to authenticate with S3 to put objects. This must have `s3:PutObject` permissions
 
-### `S3_ENDPOINT_URL`
+- `S3_ENDPOINT_URL`
 
-The endpoint of S3 or the S3-compatible service. If using AWS S3, this is usually not required.
+  The endpoint of S3 or the S3-compatible service. If using AWS S3, this is usually not required.
 
 
 ## Testing strategy
