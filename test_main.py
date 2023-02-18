@@ -29,7 +29,8 @@ def app():
     with subprocess.Popen(shlex.split(command), env={**os.environ, 'PORT': '8888'}) as p:
         wait_until_connectable(p, 8888)
         yield p
-        p.terminate()    
+        p.terminate()
+        p.wait(timeout=10)    
     p.kill()
 
 
