@@ -39,7 +39,7 @@ Configuration is via environment variables
 
 - `PORT`
 
-  The port the application listens to for HTTP requests
+  The port the application listens on for HTTP requests
 
 - `BUCKET`
 
