@@ -5,7 +5,7 @@ from starlette.concurrency import run_in_threadpool
 app = FastAPI()
 
 
-@app.get("/v1/drop")
+@app.post("/v1/drop")
 async def drop():
 
     def upload():

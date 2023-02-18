@@ -35,5 +35,5 @@ def app():
 
 
 def test_main(app):
-    response = httpx.get('http://127.0.0.1:8888/v1/drop')
+    response = httpx.post('http://127.0.0.1:8888/v1/drop')
     assert response.status_code == 201
