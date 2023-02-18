@@ -39,7 +39,7 @@ else:
 @app.post("/v1/drop")
 async def drop(request: Request) -> Response:
     try:
-        auth = request.headers['Authorization']
+        auth = request.headers['authorization']
     except KeyError:
         return Response(status_code=status.HTTP_401_UNAUTHORIZED, content='The authorization header must be present')
 
