@@ -1,15 +1,15 @@
 from fastapi import FastAPI, status
-from fastapi.responses import JSONResponse
+from fastapi.responses import Response
 from starlette.concurrency import run_in_threadpool
 
 app = FastAPI()
 
 
 @app.post("/v1/drop")
-async def drop() -> JSONResponse:
+async def drop() -> Response:
 
     def upload():
         pass
     await run_in_threadpool(upload)
 
-    return JSONResponse(status_code=status.HTTP_201_CREATED, content={})
+    return Response(status_code=status.HTTP_201_CREATED, content=b'')
