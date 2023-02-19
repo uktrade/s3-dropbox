@@ -4,10 +4,14 @@ import subprocess
 import os
 import socket
 import time
+from datetime import datetime
 from typing import Generator
+from uuid import uuid4
 
+import boto3
 import httpx
 import pytest
+from mypy_boto3_s3.service_resource import Bucket
 
 
 @pytest.fixture
@@ -44,6 +48,19 @@ def app() -> Generator[subprocess.Popen, None, None]:
         p.wait(timeout=10)    
     p.kill()
 
+
+@pytest.fixture
+def s3_bucket() -> Generator[Bucket, None, None]:
+    session = boto3.Session(
+        aws_access_key_id='AKIAIDIDIDIDIDIDIDID',
+        aws_secret_access_key='aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+    )
+    _s3_bucket = session.resource('s3', endpoint_url='http://127.0.0.1:9000/').Bucket('my-bucket')
+    _s3_bucket.objects.delete()
+    yield _s3_bucket
+    _s3_bucket.objects.delete()
+
+
 def test_no_auth(app: subprocess.Popen) -> None:
     response = httpx.post('http://127.0.0.1:8888/v1/drop')
     assert response.status_code == 401
@@ -60,9 +77,15 @@ def test_empty_body(app: subprocess.Popen) -> None:
     response = httpx.post('http://127.0.0.1:8888/v1/drop', headers={'authorization': 'Bearer my-token'})
     assert response.status_code == 201
 
-def test_non_empty_body(app: subprocess.Popen) -> None:
-    response = httpx.post('http://127.0.0.1:8888/v1/drop', headers={'authorization': 'Bearer my-token'}, content=b'-')
+def test_non_empty_body(app: subprocess.Popen, s3_bucket: Bucket) -> None:
+    content = uuid4().hex.encode()
+    response = httpx.post('http://127.0.0.1:8888/v1/drop', headers={'authorization': 'Bearer my-token'}, content=content)
     assert response.status_code == 201
+
+    objects = list(s3_bucket.objects.all())
+    assert len(objects) == 1
+    assert objects[0].key.startswith(datetime.now().isoformat()[:10])
+    assert objects[0].get()['Body'].read() == content
 
 def test_chunked(app: subprocess.Popen) -> None:
     response = httpx.post('http://127.0.0.1:8888/v1/drop', headers={'authorization': 'Bearer my-token'}, content=(b'-' * 20000,))
