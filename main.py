@@ -1,3 +1,5 @@
+import base64
+import hashlib
 import os
 import secrets
 from datetime import datetime
@@ -34,6 +36,14 @@ def get_s3_client(s3_endpoint_url: Optional[str], aws_region: str):
 app = FastAPI()
 
 
+def authenticate(settings, token_client):
+    n, r, p, dklen, salt, hashed_and_salted = settings.token.get_secret_value().split('|')
+    token_client_digest = base64.b64encode(
+        hashlib.scrypt(token_client.encode('ascii'), salt=salt.encode('ascii'), n=int(n), r=int(r), p=int(p), dklen=int(dklen))
+    )
+    return secrets.compare_digest(token_client_digest, hashed_and_salted.encode('ascii'))
+
+
 @app.post("/v1/drop")
 async def drop(request: Request, settings: Settings = Depends(get_settings)) -> Response:
     s3_client = get_s3_client(settings.s3_endpoint_url, settings.aws_region)
@@ -46,7 +56,7 @@ async def drop(request: Request, settings: Settings = Depends(get_settings)) -> 
     if not request.headers['authorization'].startswith('Bearer '):
         return Response(status_code=status.HTTP_401_UNAUTHORIZED, content='The authorization header must start with "Bearer "')
 
-    if not secrets.compare_digest(request.headers['authorization'].partition(' ')[2].strip(), settings.token.get_secret_value()):
+    if not authenticate(settings, request.headers['authorization'].partition(' ')[2].strip()):
         return Response(status_code=status.HTTP_401_UNAUTHORIZED, content='The Bearer token is not correct')
 
     try:

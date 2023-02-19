@@ -4,7 +4,7 @@ import os
 import socket
 import time
 from datetime import datetime
-from typing import Generator
+from typing import Generator, Tuple
 from uuid import uuid4
 
 import boto3
@@ -15,10 +15,11 @@ from freezegun import freeze_time
 from mypy_boto3_s3.service_resource import Bucket
 
 from main import app, get_settings, Settings
+from create_token import create_token
 
 
 @pytest.fixture
-def app_process() -> Generator[subprocess.Popen, None, None]:
+def app_process() -> Generator[Tuple[subprocess.Popen, str], None, None]:
     def wait_until_connectable(p, port, max_attempts=1000):
         for i in range(0, max_attempts):
             try:
@@ -34,6 +35,8 @@ def app_process() -> Generator[subprocess.Popen, None, None]:
     with open('Procfile', 'r') as f:
         lines = [line.partition(':') for line in f.readlines()]
 
+    token_client, token_server = create_token()
+
     command = next((command for (name, _, command) in lines if command if name == 'web'))
     with subprocess.Popen(shlex.split(command), env={
             **os.environ,
@@ -43,10 +46,10 @@ def app_process() -> Generator[subprocess.Popen, None, None]:
             'AWS_SECRET_ACCESS_KEY': 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
             'AWS_REGION': 'us-east-1',
             'BUCKET': 'my-bucket',
-            'TOKEN': 'my-token',
+            'TOKEN': token_server,
         }) as p:
         wait_until_connectable(p, 8888)
-        yield p
+        yield p, token_client
         p.terminate()
         p.wait(timeout=10)    
     p.kill()
@@ -78,34 +81,37 @@ def sock() -> Generator[socket.socket, None, None]:
     sock.close()
 
 
-def test_no_auth(app_process: subprocess.Popen) -> None:
+def test_no_auth(app_process: Tuple[subprocess.Popen, str]) -> None:
     response = httpx.post('http://127.0.0.1:8888/v1/drop')
     assert response.status_code == 401
 
 
-def test_no_bearer_auth(app_process: subprocess.Popen) -> None:
+def test_no_bearer_auth(app_process: Tuple[subprocess.Popen, str]) -> None:
     response = httpx.post('http://127.0.0.1:8888/v1/drop', headers={'authorization': 'my-token'})
     assert response.status_code == 401
 
 
-def test_bad_bearer_auth(app_process: subprocess.Popen) -> None:
+def test_bad_bearer_auth(app_process: Tuple[subprocess.Popen, str]) -> None:
     response = httpx.post('http://127.0.0.1:8888/v1/drop', headers={'authorization': 'Bearer not-my-token'})
     assert response.status_code == 401
 
 
-def test_empty_body(app_process: subprocess.Popen) -> None:
-    response = httpx.post('http://127.0.0.1:8888/v1/drop', headers={'authorization': 'Bearer my-token'})
+def test_empty_body(app_process: Tuple[subprocess.Popen, str]) -> None:
+    _, token = app_process
+    response = httpx.post('http://127.0.0.1:8888/v1/drop', headers={'authorization': f'Bearer {token}'})
     assert response.status_code == 202
 
 
-def test_too_large_body(app_process: subprocess.Popen) -> None:
-    response = httpx.post('http://127.0.0.1:8888/v1/drop', headers={'authorization': 'Bearer my-token'}, content=b'-' * 20000)
+def test_too_large_body(app_process: Tuple[subprocess.Popen, str]) -> None:
+    _, token = app_process
+    response = httpx.post('http://127.0.0.1:8888/v1/drop', headers={'authorization': f'Bearer {token}'}, content=b'-' * 20000)
     assert response.status_code == 413
 
 
-def test_non_empty_body(app_process: subprocess.Popen, s3_bucket: Bucket) -> None:
+def test_non_empty_body(app_process: Tuple[subprocess.Popen, str], s3_bucket: Bucket) -> None:
+    _, token = app_process
     content = uuid4().hex.encode()
-    response = httpx.post('http://127.0.0.1:8888/v1/drop', headers={'authorization': 'Bearer my-token'}, content=content)
+    response = httpx.post('http://127.0.0.1:8888/v1/drop', headers={'authorization': f'Bearer {token}'}, content=content)
     assert response.status_code == 202
 
     objects = list(s3_bucket.objects.all())
@@ -114,12 +120,13 @@ def test_non_empty_body(app_process: subprocess.Popen, s3_bucket: Bucket) -> Non
     assert objects[0].get()['Body'].read() == content
 
 
-def test_chunked(app_process: subprocess.Popen) -> None:
-    response = httpx.post('http://127.0.0.1:8888/v1/drop', headers={'authorization': 'Bearer my-token'}, content=(b'-' * 20000,))
+def test_chunked(app_process: Tuple[subprocess.Popen, str]) -> None:
+    _, token = app_process
+    response = httpx.post('http://127.0.0.1:8888/v1/drop', headers={'authorization': f'Bearer {token}'}, content=(b'-' * 20000,))
     assert response.status_code == 411
 
 
-def test_non_integer_content_length(app_process: subprocess.Popen, sock: socket.socket) -> None:
+def test_non_integer_content_length(app_process: Tuple[subprocess.Popen, str], sock: socket.socket) -> None:
     sock.connect(('127.0.0.1', 8888))
     sock.sendall(
         b'POST /v1/drop HTTP/1.1\r\n'
@@ -133,7 +140,7 @@ def test_non_integer_content_length(app_process: subprocess.Popen, sock: socket.
     assert raw_response.startswith(b'HTTP/1.1 400 ')
 
 
-def test_lying_content_length(app_process: subprocess.Popen, sock: socket.socket) -> None:
+def test_lying_content_length(app_process: Tuple[subprocess.Popen, str], sock: socket.socket) -> None:
     sock.connect(('127.0.0.1', 8888))
     sock.sendall(
         b'POST /v1/drop HTTP/1.1\r\n'
@@ -154,8 +161,15 @@ def test_multiple_requests_at_the_same_time(s3_bucket: Bucket, monkeypatch) -> N
     # there is no known way of doing this without assuming more about the internals of the server and
     # overriding them
 
+    token_client, token_server = create_token()
+
     async def settings_not_from_environment_variables():
-        return Settings(token='my-token', aws_region='us-east-1', s3_endpoint_url='http://127.0.0.1:9000/', bucket='my-bucket')
+        return Settings(
+            token=token_server,
+            aws_region='us-east-1',
+            s3_endpoint_url='http://127.0.0.1:9000/',
+            bucket='my-bucket',
+        )
 
     app.dependency_overrides[get_settings] = settings_not_from_environment_variables
 
@@ -166,8 +180,8 @@ def test_multiple_requests_at_the_same_time(s3_bucket: Bucket, monkeypatch) -> N
 
     with freeze_time():
         now = datetime.now()
-        response = client.post('http://127.0.0.1:8888/v1/drop', headers={'authorization': 'Bearer my-token'}, content=b'-')
-        response = client.post('http://127.0.0.1:8888/v1/drop', headers={'authorization': 'Bearer my-token'}, content=b'-')
+        response = client.post('http://127.0.0.1:8888/v1/drop', headers={'authorization': f'Bearer {token_client}'}, content=b'-')
+        response = client.post('http://127.0.0.1:8888/v1/drop', headers={'authorization': f'Bearer {token_client}'}, content=b'-')
         assert response.status_code == 202
 
     objects = list(s3_bucket.objects.all())
