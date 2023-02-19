@@ -4,16 +4,12 @@ import secrets
 
 
 def create_token():
+    # For a completely random long token (as opposed to a password), we don't
+    # need a salt or key derivation function. But we do only store a sha256 of
+    # the token on the server to mitigate the impact of the server's environment
+    # leaking - it would be very difficult to derive the token from its sha256
     token_client = secrets.token_urlsafe(64)
-    salt = secrets.token_urlsafe(64)
-    n = 16384
-    r = 8
-    p = 1
-    dklen = 64
-    hashed_and_salted_bytes = hashlib.scrypt(token_client.encode('ascii'), salt=salt.encode('ascii'), n=n, r=r, p=p, dklen=dklen)
-    hashed_and_salted = base64.b64encode(hashed_and_salted_bytes).decode('ascii')
-
-    return token_client, f'{n}|{r}|{p}|{dklen}|{salt}|{hashed_and_salted}'
+    return token_client, base64.b64encode(hashlib.sha256(token_client.encode()).digest()).decode()
 
 
 if __name__ == '__main__':
