@@ -38,6 +38,11 @@ pytest -s
 At the time of writing, it hasn't been necessary to run the application locally outside of tests.
 
 
+## Testing strategy
+
+The tests do not depend on what server is running, or even if the server is a Python. This is deliberate so another server could be swapped out, and if the tests pass, this would give confidence that there will be no user-facing break of behaviour.
+
+
 ## Confguration
 
 Configuration is via environment variables
@@ -66,7 +71,3 @@ Configuration is via environment variables
 
   The token that clients will pass in the authorization header in the format `authorization: Bearer <token>`
 
-
-## Testing strategy
-
-The tests do not depend on what server is running, or even if the server is a Python. This is deliberate so another server could be swapped out, and if the tests pass, this would give confidence that there will be no user-facing break of behaviour.
