@@ -1,46 +1,35 @@
 import os
 import secrets
 from datetime import datetime
+from typing import Optional
 from uuid import uuid4
 
 import boto3
 from fastapi import FastAPI, Request, status
 from fastapi.responses import Response
+from pydantic import BaseSettings, Field
 from starlette.concurrency import run_in_threadpool
 
+
+class Settings(BaseSettings):
+    token: str
+    bucket: str
+    aws_region: str
+    s3_endpoint_url: Optional[str]
+
+settings = Settings()
 app = FastAPI()
 
-token = ''
-bucket = None
 s3_client = None
 
 @app.on_event("startup")
 async def startup_event():
-    global token
-    global bucket
     global s3_client
 
-    try:
-        token = os.environ['TOKEN']
-    except KeyError:
-        raise KeyError('The TOKEN environment variable must be set to the Bearer token that will be used to authenticate requests')
-
-    try:
-        bucket = os.environ['BUCKET']
-    except KeyError:
-        raise KeyError('The BUCKET environment variable must be set with the name of the bucket to upload to')
-
-    try:
-        region_name = os.environ['AWS_REGION']
-    except KeyError:
-        raise KeyError('The AWS_REGION environment variable must be set with the region of the bucket to upload to')
-
-    try:
-        endpoint_url = os.environ['S3_ENDPOINT_URL']
-    except KeyError:
-        s3_client = boto3.client('s3', region_name=region_name)
+    if settings.s3_endpoint_url is not None:
+        s3_client = boto3.client('s3', region_name=settings.aws_region, endpoint_url=settings.s3_endpoint_url)
     else:
-        s3_client = boto3.client('s3', region_name=region_name, endpoint_url=endpoint_url)
+        s3_client = boto3.client('s3', region_name=settings.aws_region)
 
 
 @app.post("/v1/drop")
@@ -54,7 +43,7 @@ async def drop(request: Request) -> Response:
         return Response(status_code=status.HTTP_401_UNAUTHORIZED, content='The authorization header must start with "Bearer "')
 
     passed_token = auth.partition(' ')[2].strip()
-    if not secrets.compare_digest(passed_token, token):
+    if not secrets.compare_digest(passed_token, settings.token):
         return Response(status_code=status.HTTP_401_UNAUTHORIZED, content='The Bearer token is not correct')
 
     try:
@@ -69,7 +58,7 @@ async def drop(request: Request) -> Response:
     key = f'{datetime.now().isoformat()}-{uuid4()}'
 
     def upload():
-        s3_client.put_object(Bucket=bucket, Key=key, Body=body)
+        s3_client.put_object(Bucket=settings.bucket, Key=key, Body=body)
     await run_in_threadpool(upload)
 
     return Response(status_code=status.HTTP_201_CREATED, content=b'')
