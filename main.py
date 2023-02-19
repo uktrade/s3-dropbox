@@ -8,12 +8,12 @@ from uuid import uuid4
 import boto3
 from fastapi import Depends, FastAPI, Request, status
 from fastapi.responses import Response
-from pydantic import BaseSettings, Field
+from pydantic import BaseSettings, SecretStr
 from starlette.concurrency import run_in_threadpool
 
 
 class Settings(BaseSettings):
-    token: str
+    token: SecretStr
     bucket: str
     aws_region: str
     s3_endpoint_url: Optional[str]
@@ -47,7 +47,7 @@ async def drop(request: Request, settings: Settings = Depends(get_settings)) -> 
         return Response(status_code=status.HTTP_401_UNAUTHORIZED, content='The authorization header must start with "Bearer "')
 
     passed_token = auth.partition(' ')[2].strip()
-    if not secrets.compare_digest(passed_token, settings.token):
+    if not secrets.compare_digest(passed_token, settings.token.get_secret_value()):
         return Response(status_code=status.HTTP_401_UNAUTHORIZED, content='The Bearer token is not correct')
 
     try:
