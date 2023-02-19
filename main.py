@@ -1,11 +1,12 @@
 import os
 import secrets
 from datetime import datetime
+from functools import lru_cache
 from typing import Optional
 from uuid import uuid4
 
 import boto3
-from fastapi import FastAPI, Request, status
+from fastapi import Depends, FastAPI, Request, status
 from fastapi.responses import Response
 from pydantic import BaseSettings, Field
 from starlette.concurrency import run_in_threadpool
@@ -17,15 +18,19 @@ class Settings(BaseSettings):
     aws_region: str
     s3_endpoint_url: Optional[str]
 
-settings = Settings()
-app = FastAPI()
+@lru_cache()
+def get_settings():
+    return Settings()
 
+app = FastAPI()
 s3_client = None
+
 
 @app.on_event("startup")
 async def startup_event():
     global s3_client
 
+    settings = get_settings()
     if settings.s3_endpoint_url is not None:
         s3_client = boto3.client('s3', region_name=settings.aws_region, endpoint_url=settings.s3_endpoint_url)
     else:
@@ -33,7 +38,7 @@ async def startup_event():
 
 
 @app.post("/v1/drop")
-async def drop(request: Request) -> Response:
+async def drop(request: Request, settings: Settings = Depends(get_settings)) -> Response:
     try:
         auth = request.headers['authorization']
     except KeyError:
