@@ -39,15 +39,14 @@ async def drop(request: Request, settings: Settings = Depends(get_settings)) -> 
     s3_client = get_s3_client(settings.s3_endpoint_url, settings.aws_region)
 
     try:
-        auth = request.headers['authorization']
+        request.headers['authorization']
     except KeyError:
         return Response(status_code=status.HTTP_401_UNAUTHORIZED, content='The authorization header must be present')
 
-    if not auth.startswith('Bearer '):
+    if not request.headers['authorization'].startswith('Bearer '):
         return Response(status_code=status.HTTP_401_UNAUTHORIZED, content='The authorization header must start with "Bearer "')
 
-    passed_token = auth.partition(' ')[2].strip()
-    if not secrets.compare_digest(passed_token, settings.token.get_secret_value()):
+    if not secrets.compare_digest(request.headers['authorization'].partition(' ')[2].strip(), settings.token.get_secret_value()):
         return Response(status_code=status.HTTP_401_UNAUTHORIZED, content='The Bearer token is not correct')
 
     try:
