@@ -10,11 +10,15 @@ from uuid import uuid4
 import boto3
 import httpx
 import pytest
+from fastapi.testclient import TestClient
+from freezegun import freeze_time
 from mypy_boto3_s3.service_resource import Bucket
+
+from main import app, get_settings, Settings
 
 
 @pytest.fixture
-def app() -> Generator[subprocess.Popen, None, None]:
+def app_process() -> Generator[subprocess.Popen, None, None]:
     def wait_until_connectable(p, port, max_attempts=1000):
         for i in range(0, max_attempts):
             try:
@@ -74,32 +78,32 @@ def sock() -> Generator[socket.socket, None, None]:
     sock.close()
 
 
-def test_no_auth(app: subprocess.Popen) -> None:
+def test_no_auth(app_process: subprocess.Popen) -> None:
     response = httpx.post('http://127.0.0.1:8888/v1/drop')
     assert response.status_code == 401
 
 
-def test_no_bearer_auth(app: subprocess.Popen) -> None:
+def test_no_bearer_auth(app_process: subprocess.Popen) -> None:
     response = httpx.post('http://127.0.0.1:8888/v1/drop', headers={'authorization': 'my-token'})
     assert response.status_code == 401
 
 
-def test_bad_bearer_auth(app: subprocess.Popen) -> None:
+def test_bad_bearer_auth(app_process: subprocess.Popen) -> None:
     response = httpx.post('http://127.0.0.1:8888/v1/drop', headers={'authorization': 'Bearer not-my-token'})
     assert response.status_code == 401
 
 
-def test_empty_body(app: subprocess.Popen) -> None:
+def test_empty_body(app_process: subprocess.Popen) -> None:
     response = httpx.post('http://127.0.0.1:8888/v1/drop', headers={'authorization': 'Bearer my-token'})
     assert response.status_code == 201
 
 
-def test_too_large_body(app: subprocess.Popen) -> None:
+def test_too_large_body(app_process: subprocess.Popen) -> None:
     response = httpx.post('http://127.0.0.1:8888/v1/drop', headers={'authorization': 'Bearer my-token'}, content=b'-' * 20000)
     assert response.status_code == 413
 
 
-def test_non_empty_body(app: subprocess.Popen, s3_bucket: Bucket) -> None:
+def test_non_empty_body(app_process: subprocess.Popen, s3_bucket: Bucket) -> None:
     content = uuid4().hex.encode()
     response = httpx.post('http://127.0.0.1:8888/v1/drop', headers={'authorization': 'Bearer my-token'}, content=content)
     assert response.status_code == 201
@@ -110,12 +114,12 @@ def test_non_empty_body(app: subprocess.Popen, s3_bucket: Bucket) -> None:
     assert objects[0].get()['Body'].read() == content
 
 
-def test_chunked(app: subprocess.Popen) -> None:
+def test_chunked(app_process: subprocess.Popen) -> None:
     response = httpx.post('http://127.0.0.1:8888/v1/drop', headers={'authorization': 'Bearer my-token'}, content=(b'-' * 20000,))
     assert response.status_code == 411
 
 
-def test_non_integer_content_length(app: subprocess.Popen, sock: socket.socket) -> None:
+def test_non_integer_content_length(app_process: subprocess.Popen, sock: socket.socket) -> None:
     sock.connect(('127.0.0.1', 8888))
     sock.sendall(
         b'POST /v1/drop HTTP/1.1\r\n'
@@ -129,7 +133,7 @@ def test_non_integer_content_length(app: subprocess.Popen, sock: socket.socket) 
     assert raw_response.startswith(b'HTTP/1.1 400 ')
 
 
-def test_lying_content_length(app: subprocess.Popen, sock: socket.socket) -> None:
+def test_lying_content_length(app_process: subprocess.Popen, sock: socket.socket) -> None:
     sock.connect(('127.0.0.1', 8888))
     sock.sendall(
         b'POST /v1/drop HTTP/1.1\r\n'
@@ -142,3 +146,33 @@ def test_lying_content_length(app: subprocess.Popen, sock: socket.socket) -> Non
     raw_response = sock.recv(1024)
 
     assert raw_response.startswith(b'HTTP/1.1 400 ')
+
+
+def test_multiple_requests_at_the_same_time(s3_bucket: Bucket, monkeypatch) -> None:
+    # We usually avoid mocking/patching or anything that assumes the server is FastAPI, or even Python
+    # However, for this test we want to force multiple requests to happen at the exact same time, and
+    # there is no known way of doing this without assuming more about the internals of the server and
+    # overriding them
+
+    async def settings_not_from_environment_variables():
+        return Settings(token='my-token', aws_region='us-east-1', s3_endpoint_url='http://127.0.0.1:9000/', bucket='my-bucket')
+
+    app.dependency_overrides[get_settings] = settings_not_from_environment_variables
+
+    # boto3 users environment variables directly, so we can't use FastAPIs usual mechanism of overriding settings
+    monkeypatch.setenv('AWS_ACCESS_KEY_ID', 'AKIAIDIDIDIDIDIDIDID')
+    monkeypatch.setenv('AWS_SECRET_ACCESS_KEY', 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa')
+    client = TestClient(app)
+
+    with freeze_time():
+        now = datetime.now()
+        response = client.post('http://127.0.0.1:8888/v1/drop', headers={'authorization': 'Bearer my-token'}, content=b'-')
+        response = client.post('http://127.0.0.1:8888/v1/drop', headers={'authorization': 'Bearer my-token'}, content=b'-')
+        assert response.status_code == 201
+
+    objects = list(s3_bucket.objects.all())
+    assert len(objects) == 2
+    assert objects[0].key.startswith(now.isoformat())
+    assert objects[0].get()['Body'].read() == b'-'
+    assert objects[1].key.startswith(now.isoformat())
+    assert objects[1].get()['Body'].read() == b'-'

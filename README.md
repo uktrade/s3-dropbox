@@ -40,7 +40,9 @@ At the time of writing, it hasn't been necessary to run the application locally 
 
 ## Testing strategy
 
-The tests do not depend on what server is running, or even if the server is a Python. This is deliberate so another server could be swapped out, and if the tests pass, this would give confidence that there will be no user-facing break of behaviour.
+For the most part tests do not depend on what server is running, or even if the server is a Python. This is deliberate so another server could be swapped out, and if the tests pass, this would give confidence that there will be no user-facing break of behaviour.
+
+The exception is if we need to mock/patch particular functions. This is avoided, but occasionally there is no other known way to test certain cases. For example, to have multiple requests made at the _exact_ same time from the point of view of the code.
 
 
 ## Confguration
@@ -70,4 +72,3 @@ Configuration is via environment variables
 - `TOKEN`
 
   The token that clients will pass in the authorization header in the format `authorization: Bearer <token>`
-

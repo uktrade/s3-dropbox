@@ -1,5 +1,6 @@
 -r requirements.txt
 
+freezegun
 httpx
 mypy
 pytest
