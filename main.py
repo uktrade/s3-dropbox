@@ -22,23 +22,22 @@ class Settings(BaseSettings):
 def get_settings():
     return Settings()
 
-app = FastAPI()
-s3_client = None
-
-
-@app.on_event("startup")
-async def startup_event():
-    global s3_client
-
-    settings = get_settings()
-    if settings.s3_endpoint_url is not None:
-        s3_client = boto3.client('s3', region_name=settings.aws_region, endpoint_url=settings.s3_endpoint_url)
+@lru_cache()
+def get_s3_client(s3_endpoint_url: Optional[str], aws_region: str):
+    if s3_endpoint_url is not None:
+        s3_client = boto3.client('s3', region_name=aws_region, endpoint_url=s3_endpoint_url)
     else:
-        s3_client = boto3.client('s3', region_name=settings.aws_region)
+        s3_client = boto3.client('s3', region_name=aws_region)
+
+    return s3_client
+
+app = FastAPI()
 
 
 @app.post("/v1/drop")
 async def drop(request: Request, settings: Settings = Depends(get_settings)) -> Response:
+    s3_client = get_s3_client(settings.s3_endpoint_url, settings.aws_region)
+
     try:
         auth = request.headers['authorization']
     except KeyError:
