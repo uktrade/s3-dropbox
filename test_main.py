@@ -95,7 +95,7 @@ def test_bad_bearer_auth(app_process: subprocess.Popen) -> None:
 
 def test_empty_body(app_process: subprocess.Popen) -> None:
     response = httpx.post('http://127.0.0.1:8888/v1/drop', headers={'authorization': 'Bearer my-token'})
-    assert response.status_code == 201
+    assert response.status_code == 202
 
 
 def test_too_large_body(app_process: subprocess.Popen) -> None:
@@ -106,7 +106,7 @@ def test_too_large_body(app_process: subprocess.Popen) -> None:
 def test_non_empty_body(app_process: subprocess.Popen, s3_bucket: Bucket) -> None:
     content = uuid4().hex.encode()
     response = httpx.post('http://127.0.0.1:8888/v1/drop', headers={'authorization': 'Bearer my-token'}, content=content)
-    assert response.status_code == 201
+    assert response.status_code == 202
 
     objects = list(s3_bucket.objects.all())
     assert len(objects) == 1
@@ -168,7 +168,7 @@ def test_multiple_requests_at_the_same_time(s3_bucket: Bucket, monkeypatch) -> N
         now = datetime.now()
         response = client.post('http://127.0.0.1:8888/v1/drop', headers={'authorization': 'Bearer my-token'}, content=b'-')
         response = client.post('http://127.0.0.1:8888/v1/drop', headers={'authorization': 'Bearer my-token'}, content=b'-')
-        assert response.status_code == 201
+        assert response.status_code == 202
 
     objects = list(s3_bucket.objects.all())
     assert len(objects) == 2

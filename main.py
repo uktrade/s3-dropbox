@@ -64,4 +64,4 @@ async def drop(request: Request, settings: Settings = Depends(get_settings)) -> 
         s3_client.put_object(Bucket=settings.bucket, Key=key, Body=body)
     await run_in_threadpool(upload)
 
-    return Response(status_code=status.HTTP_201_CREATED, content=b'')
+    return Response(status_code=status.HTTP_202_ACCEPTED, content=b'')
