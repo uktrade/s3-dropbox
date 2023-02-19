@@ -10,30 +10,37 @@ from starlette.concurrency import run_in_threadpool
 
 app = FastAPI()
 
+token = ''
+bucket = None
+s3_client = None
 
-try:
-    token = os.environ['TOKEN']
-except KeyError:
-    raise KeyError('The TOKEN environment variable must be set to the Bearer token that will be used to authenticate requests')
+@app.on_event("startup")
+async def startup_event():
+    global token
+    global bucket
+    global s3_client
 
+    try:
+        token = os.environ['TOKEN']
+    except KeyError:
+        raise KeyError('The TOKEN environment variable must be set to the Bearer token that will be used to authenticate requests')
 
-try:
-    bucket = os.environ['BUCKET']
-except KeyError:
-    raise KeyError('The BUCKET environment variable must be set with the name of the bucket to upload to')
+    try:
+        bucket = os.environ['BUCKET']
+    except KeyError:
+        raise KeyError('The BUCKET environment variable must be set with the name of the bucket to upload to')
 
+    try:
+        region_name = os.environ['AWS_REGION']
+    except KeyError:
+        raise KeyError('The AWS_REGION environment variable must be set with the region of the bucket to upload to')
 
-try:
-    region_name = os.environ['AWS_REGION']
-except KeyError:
-    raise KeyError('The AWS_REGION environment variable must be set with the region of the bucket to upload to')
-
-try:
-    endpoint_url = os.environ['S3_ENDPOINT_URL']
-except KeyError:
-    s3_client = boto3.client('s3', region_name=region_name)
-else:
-    s3_client = boto3.client('s3', region_name=region_name, endpoint_url=endpoint_url)
+    try:
+        endpoint_url = os.environ['S3_ENDPOINT_URL']
+    except KeyError:
+        s3_client = boto3.client('s3', region_name=region_name)
+    else:
+        s3_client = boto3.client('s3', region_name=region_name, endpoint_url=endpoint_url)
 
 
 @app.post("/v1/drop")
