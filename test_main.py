@@ -94,6 +94,11 @@ def test_empty_body(app: subprocess.Popen) -> None:
     assert response.status_code == 201
 
 
+def test_too_large_body(app: subprocess.Popen) -> None:
+    response = httpx.post('http://127.0.0.1:8888/v1/drop', headers={'authorization': 'Bearer my-token'}, content=b'-' * 20000)
+    assert response.status_code == 413
+
+
 def test_non_empty_body(app: subprocess.Popen, s3_bucket: Bucket) -> None:
     content = uuid4().hex.encode()
     response = httpx.post('http://127.0.0.1:8888/v1/drop', headers={'authorization': 'Bearer my-token'}, content=content)
@@ -137,8 +142,3 @@ def test_lying_content_length(app: subprocess.Popen, sock: socket.socket) -> Non
     raw_response = sock.recv(1024)
 
     assert raw_response.startswith(b'HTTP/1.1 400 ')
-
-
-def test_too_large_body(app: subprocess.Popen) -> None:
-    response = httpx.post('http://127.0.0.1:8888/v1/drop', headers={'authorization': 'Bearer my-token'}, content=b'-' * 20000)
-    assert response.status_code == 413
