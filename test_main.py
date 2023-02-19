@@ -1,4 +1,3 @@
-import contextlib
 import shlex
 import subprocess
 import os
@@ -61,6 +60,20 @@ def s3_bucket() -> Generator[Bucket, None, None]:
     _s3_bucket.objects.delete()
 
 
+@pytest.fixture
+def sock() -> Generator[socket.socket, None, None]:
+    # Most HTTP clients don't allow sending a bad content-length, so we
+    # make the request manually
+
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    yield sock
+    try:
+        sock.shutdown(socket.SHUT_RDWR)
+    except OSError:
+        pass
+    sock.close()
+
+
 def test_no_auth(app: subprocess.Popen) -> None:
     response = httpx.post('http://127.0.0.1:8888/v1/drop')
     assert response.status_code == 401
@@ -97,63 +110,31 @@ def test_chunked(app: subprocess.Popen) -> None:
     assert response.status_code == 411
 
 
-def test_non_integer_content_length(app: subprocess.Popen) -> None:
-    # Most HTTP clients don't allow sending a non-integer content-length, so we
-    # make the request manually
-
-    @contextlib.contextmanager
-    def get_sock():
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        try:
-            yield sock
-        finally:
-            try:
-                sock.shutdown(socket.SHUT_RDWR)
-            except OSError:
-                pass
-            sock.close()
-
-    with get_sock() as sock:
-        sock.connect(('127.0.0.1', 8888))
-        sock.sendall(
-            b'POST /v1/drop HTTP/1.1\r\n'
-            b'host: example.com\r\n'
-            b'token: Bearer my-token\r\n'
-            b'content-length: bad\r\n'
-            b'\r\n'
-        )
-        raw_response = sock.recv(1024)
+def test_non_integer_content_length(app: subprocess.Popen, sock: socket.socket) -> None:
+    sock.connect(('127.0.0.1', 8888))
+    sock.sendall(
+        b'POST /v1/drop HTTP/1.1\r\n'
+        b'host: example.com\r\n'
+        b'token: Bearer my-token\r\n'
+        b'content-length: bad\r\n'
+        b'\r\n'
+    )
+    raw_response = sock.recv(1024)
 
     assert raw_response.startswith(b'HTTP/1.1 400 ')
 
 
-def test_lying_content_length(app: subprocess.Popen) -> None:
-    # Most HTTP clients don't allow sending a non-integer content-length, so we
-    # make the request manually
-
-    @contextlib.contextmanager
-    def get_sock():
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        try:
-            yield sock
-        finally:
-            try:
-                sock.shutdown(socket.SHUT_RDWR)
-            except OSError:
-                pass
-            sock.close()
-
-    with get_sock() as sock:
-        sock.connect(('127.0.0.1', 8888))
-        sock.sendall(
-            b'POST /v1/drop HTTP/1.1\r\n'
-            b'host: example.com\r\n'
-            b'token: Bearer my-token\r\n'
-            b'content-length: 3\r\n'
-            b'\r\n'
-            b'1234'
-        )
-        raw_response = sock.recv(1024)
+def test_lying_content_length(app: subprocess.Popen, sock: socket.socket) -> None:
+    sock.connect(('127.0.0.1', 8888))
+    sock.sendall(
+        b'POST /v1/drop HTTP/1.1\r\n'
+        b'host: example.com\r\n'
+        b'token: Bearer my-token\r\n'
+        b'content-length: 3\r\n'
+        b'\r\n'
+        b'1234'
+    )
+    raw_response = sock.recv(1024)
 
     assert raw_response.startswith(b'HTTP/1.1 400 ')
 
