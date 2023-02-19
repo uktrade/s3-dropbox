@@ -65,17 +65,21 @@ def test_no_auth(app: subprocess.Popen) -> None:
     response = httpx.post('http://127.0.0.1:8888/v1/drop')
     assert response.status_code == 401
 
+
 def test_no_bearer_auth(app: subprocess.Popen) -> None:
     response = httpx.post('http://127.0.0.1:8888/v1/drop', headers={'authorization': 'my-token'})
     assert response.status_code == 401
+
 
 def test_bad_bearer_auth(app: subprocess.Popen) -> None:
     response = httpx.post('http://127.0.0.1:8888/v1/drop', headers={'authorization': 'Bearer not-my-token'})
     assert response.status_code == 401
 
+
 def test_empty_body(app: subprocess.Popen) -> None:
     response = httpx.post('http://127.0.0.1:8888/v1/drop', headers={'authorization': 'Bearer my-token'})
     assert response.status_code == 201
+
 
 def test_non_empty_body(app: subprocess.Popen, s3_bucket: Bucket) -> None:
     content = uuid4().hex.encode()
@@ -86,6 +90,7 @@ def test_non_empty_body(app: subprocess.Popen, s3_bucket: Bucket) -> None:
     assert len(objects) == 1
     assert objects[0].key.startswith(datetime.now().isoformat()[:10])
     assert objects[0].get()['Body'].read() == content
+
 
 def test_chunked(app: subprocess.Popen) -> None:
     response = httpx.post('http://127.0.0.1:8888/v1/drop', headers={'authorization': 'Bearer my-token'}, content=(b'-' * 20000,))
