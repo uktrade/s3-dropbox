@@ -33,6 +33,11 @@ pytest -s
 ````
 
 
+## Running locally outside of tests
+
+At the time of writing, it hasn't been necessary to run the application locally outside of tests.
+
+
 ## Confguration
 
 Configuration is via environment variables
