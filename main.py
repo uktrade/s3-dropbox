@@ -37,10 +37,10 @@ app = FastAPI()
 
 
 @app.post("/v1/drop", response_class=Response, responses={
-    202: {"description": "A successful drop"},
-    401: {"description": "The Bearer token is not passed or is incorrect"},
-    411: {"description": "The content-length header has not been passed, for example if chunked encoding has been used"},
-    413: {"description": "The body is too long. The maximum is 10240 bytes"},
+    202: {"description": "A successful drop", "content": {"text/plain": {}}},
+    401: {"description": "The Bearer token is not passed or is incorrect", "content": {"text/plain": {}}},
+    411: {"description": "The content-length header has not been passed, for example if chunked encoding has been used", "content": {"text/plain": {}}},
+    413: {"description": "The body is too long. The maximum is 10240 bytes", "content": {"text/plain": {}}},
 })
 async def drop(
         request: Request,
@@ -75,4 +75,4 @@ async def drop(
         s3_client.put_object(Bucket=settings.bucket, Key=key, Body=body)
     await run_in_threadpool(upload)
 
-    return Response(status_code=status.HTTP_202_ACCEPTED, content=b'')
+    return Response(status_code=status.HTTP_202_ACCEPTED, content=b'', media_type='text/plain')
