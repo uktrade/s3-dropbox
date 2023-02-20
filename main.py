@@ -36,15 +36,17 @@ def get_s3_client(s3_endpoint_url: Optional[str], aws_region: str):
 app = FastAPI()
 
 
-@app.post("/v1/drop", response_class=Response, status_code=202, responses={
-    202: {"description": "A successful drop", "content": {"text/plain": {}}},
-    401: {"description": "The Bearer token is not passed or is incorrect", "content": {"text/plain": {}}},
-    411: {"description": "The content-length header has not been passed, for example if chunked encoding has been used", "content": {"text/plain": {}}},
-    413: {"description": "The body is too long. The maximum is 10240 bytes", "content": {"text/plain": {}}},
-})
+@app.post("/v1/drop", response_class=Response, status_code=202,
+    description="Accepts a raw binary blob to be dropped into the pre-configured S3 bucket",
+    responses={
+        202: {"description": "A successful drop", "content": {"text/plain": {}}},
+        401: {"description": "The Bearer token is not passed or is incorrect", "content": {"text/plain": {}}},
+        411: {"description": "The content-length header has not been passed, for example if chunked encoding has been used", "content": {"text/plain": {}}},
+        413: {"description": "The body is too long. The maximum is 10240 bytes", "content": {"text/plain": {}}},
+    },
+)
 async def drop(
         request: Request,
-        description="Accepts a raw binary blob to be dropped into the pre-configured S3 bucket",
         authorization: None | str = Header(default=None, description="Must be in 'Bearer <token>' format, where <token> is the pre-configured bearer token"),
         content_length: None | str = Header(default=None, description="The length of the body, which must be less than or equal to 10240"),
         settings: Settings = Depends(get_settings),
