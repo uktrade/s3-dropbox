@@ -37,7 +37,12 @@ app = FastAPI()
 
 
 @app.post("/v1/drop")
-async def drop(request: Request, authorization: None | str = Header(default=None), settings: Settings = Depends(get_settings)) -> Response:
+async def drop(
+        request: Request,
+        authorization: None | str = Header(default=None),
+        content_length: None | str = Header(default=None),
+        settings: Settings = Depends(get_settings),
+    ) -> Response:
     s3_client = get_s3_client(settings.s3_endpoint_url, settings.aws_region)
 
     if authorization is None:
@@ -52,12 +57,10 @@ async def drop(request: Request, authorization: None | str = Header(default=None
     ):
         return Response(status_code=status.HTTP_401_UNAUTHORIZED, content='The Bearer token is not correct')
 
-    try:
-        length = int(request.headers['content-length'])
-    except KeyError:
+    if content_length is None:
         return Response(status_code=status.HTTP_411_LENGTH_REQUIRED, content=b'The content-length header must be present')
 
-    if length > 10240:
+    if int(content_length) > 10240:
         return Response(status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, content=b'The request body must be less 10240 bytes')
 
     body = await request.body()
