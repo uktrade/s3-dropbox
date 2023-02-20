@@ -36,7 +36,7 @@ def get_s3_client(s3_endpoint_url: Optional[str], aws_region: str):
 app = FastAPI()
 
 
-@app.post("/v1/drop")
+@app.post("/v1/drop", response_class=Response)
 async def drop(
         request: Request,
         authorization: None | str = Header(default=None),
