@@ -36,7 +36,7 @@ def get_s3_client(s3_endpoint_url: Optional[str], aws_region: str):
 app = FastAPI()
 
 
-@app.post("/v1/drop", response_class=Response, responses={
+@app.post("/v1/drop", response_class=Response, status_code=202, responses={
     202: {"description": "A successful drop", "content": {"text/plain": {}}},
     401: {"description": "The Bearer token is not passed or is incorrect", "content": {"text/plain": {}}},
     411: {"description": "The content-length header has not been passed, for example if chunked encoding has been used", "content": {"text/plain": {}}},
