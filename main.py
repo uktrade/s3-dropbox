@@ -44,8 +44,9 @@ app = FastAPI()
 })
 async def drop(
         request: Request,
-        authorization: None | str = Header(default=None),
-        content_length: None | str = Header(default=None),
+        description="Accepts a raw binary blob to be dropped into the pre-configured S3 bucket",
+        authorization: None | str = Header(default=None, description="Must be in 'Bearer <token>' format, where <token> is the pre-configured bearer token"),
+        content_length: None | str = Header(default=None, description="The length of the body, which must be less than or equal to 10240"),
         settings: Settings = Depends(get_settings),
     ) -> Response:
     s3_client = get_s3_client(settings.s3_endpoint_url, settings.aws_region)
