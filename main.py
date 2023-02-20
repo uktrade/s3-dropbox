@@ -8,7 +8,7 @@ from typing import Optional
 from uuid import uuid4
 
 import boto3
-from fastapi import Depends, FastAPI, Request, status
+from fastapi import Depends, FastAPI, Header, Request, status
 from fastapi.responses import Response
 from pydantic import BaseSettings, SecretStr
 from starlette.concurrency import run_in_threadpool
@@ -37,20 +37,18 @@ app = FastAPI()
 
 
 @app.post("/v1/drop")
-async def drop(request: Request, settings: Settings = Depends(get_settings)) -> Response:
+async def drop(request: Request, authorization: None | str = Header(default=None), settings: Settings = Depends(get_settings)) -> Response:
     s3_client = get_s3_client(settings.s3_endpoint_url, settings.aws_region)
 
-    try:
-        request.headers['authorization']
-    except KeyError:
+    if authorization is None:
         return Response(status_code=status.HTTP_401_UNAUTHORIZED, content='The authorization header must be present')
 
-    if not request.headers['authorization'].startswith('Bearer '):
+    if not authorization.startswith('Bearer '):
         return Response(status_code=status.HTTP_401_UNAUTHORIZED, content='The authorization header must start with "Bearer "')
 
     if not secrets.compare_digest(
         settings.token.get_secret_value().encode(),
-        base64.b64encode(hashlib.sha256(request.headers['authorization'].partition(' ')[2].strip().encode()).digest()),
+        base64.b64encode(hashlib.sha256(authorization.partition(' ')[2].strip().encode()).digest()),
     ):
         return Response(status_code=status.HTTP_401_UNAUTHORIZED, content='The Bearer token is not correct')
 
