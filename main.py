@@ -47,7 +47,7 @@ app = FastAPI()
 )
 async def drop(
         request: Request,
-        authorization: None | str = Header(default=None, description="Must be in 'Bearer <token>' format, where <token> is the pre-configured bearer token"),
+        authorization: None | str = Header(default=None, description="Must be in 'Bearer _token_' format, where _token_ is the pre-configured bearer token"),
         content_length: None | str = Header(default=None, description="The length of the body, which must be less than or equal to 10240"),
         settings: Settings = Depends(get_settings),
     ) -> Response:
