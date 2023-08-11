@@ -25,7 +25,7 @@ botocore-stubs==1.29.74
     # via
     #   -r requirements.txt
     #   boto3-stubs
-certifi==2022.12.7
+certifi==2023.7.22
     # via
     #   httpcore
     #   httpx
@@ -33,8 +33,6 @@ click==8.1.3
     # via
     #   -r requirements.txt
     #   uvicorn
-exceptiongroup==1.1.1
-    # via pytest
 fastapi==0.97.0
     # via -r requirements.txt
 freezegun==1.2.2
@@ -120,10 +118,7 @@ starlette==0.27.0
     #   -r requirements.txt
     #   fastapi
 tomli==2.0.1
-    # via
-    #   -r requirements.txt
-    #   mypy
-    #   pytest
+    # via -r requirements.txt
 types-awscrt==0.16.10
     # via
     #   -r requirements.txt
@@ -140,7 +135,6 @@ typing-extensions==4.5.0
     #   mypy
     #   mypy-boto3-s3
     #   pydantic
-    #   starlette
 urllib3==1.26.14
     # via
     #   -r requirements.txt
