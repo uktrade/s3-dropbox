@@ -117,8 +117,6 @@ starlette==0.27.0
     # via
     #   -r requirements.txt
     #   fastapi
-tomli==2.0.1
-    # via -r requirements.txt
 types-awscrt==0.16.10
     # via
     #   -r requirements.txt
@@ -135,7 +133,7 @@ typing-extensions==4.5.0
     #   mypy
     #   mypy-boto3-s3
     #   pydantic
-urllib3==1.26.14
+urllib3==1.26.17
     # via
     #   -r requirements.txt
     #   botocore
