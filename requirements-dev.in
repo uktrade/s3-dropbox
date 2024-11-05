@@ -1,5 +1,6 @@
 -r requirements.txt
 
+boto3-stubs[s3]
 freezegun
 httpx
 mypy

@@ -14,5 +14,5 @@ def create_token():
 
 if __name__ == '__main__':
     token_client, token_server = create_token()
-    print(f'Plain text Bearer token to give to client: {token_client}')
-    print(f'TOKEN to store in server:                  {token_server}')
+    print(f'Client token (plain text):          {token_client}')
+    print(f'Server token (hashed client token): {token_server}')
