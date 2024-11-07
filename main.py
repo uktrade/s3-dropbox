@@ -1,81 +1,84 @@
-import base64
 import hashlib
 import os
 import secrets
+from base64 import b64encode, b64decode
 from datetime import datetime
-from functools import lru_cache
-from typing import Optional
 from uuid import uuid4
 
 import boto3
-from fastapi import Depends, FastAPI, Header, Request, status
-from fastapi.responses import Response
-from pydantic import BaseSettings, SecretStr
-from starlette.concurrency import run_in_threadpool
 
 
-class Settings(BaseSettings):
-    token: SecretStr
-    bucket: str
-    aws_region: str
-    s3_endpoint_url: Optional[str]
+def lambda_handler(event, context):
+    s3_client = boto3.client('s3', endpoint_url=os.environ.get('S3_ENDPOINT_URL'))
 
-@lru_cache()
-def get_settings():
-    return Settings()
+    method = event.get("requestContext", {}).get("http", {}).get("method")
+    headers = event.get("headers", {})
+    content_length = headers.get("content-length")
+    body = event.get("body")
 
-@lru_cache()
-def get_s3_client(s3_endpoint_url: Optional[str], aws_region: str):
-    if s3_endpoint_url is not None:
-        s3_client = boto3.client('s3', region_name=aws_region, endpoint_url=s3_endpoint_url)
-    else:
-        s3_client = boto3.client('s3', region_name=aws_region)
-
-    return s3_client
-
-app = FastAPI()
-
-
-@app.post("/v1/drop", response_class=Response, status_code=202,
-    description="Accepts a raw binary blob to be dropped into the pre-configured S3 bucket",
-    responses={
-        202: {"description": "A successful drop", "content": {"text/plain": {}}},
-        401: {"description": "The Bearer token is not passed or is incorrect", "content": {"text/plain": {}}},
-        411: {"description": "The content-length header has not been passed, for example if chunked encoding has been used", "content": {"text/plain": {}}},
-        413: {"description": "The body is too long. The maximum is 10240 bytes", "content": {"text/plain": {}}},
-    },
-)
-async def drop(
-        request: Request,
-        authorization: None | str = Header(default=None, description="Must be in 'Bearer _token_' format, where _token_ is the pre-configured bearer token"),
-        content_length: None | str = Header(default=None, description="The length of the body, which must be less than or equal to 10240. Chunked transfer encoding is not supported."),
-        settings: Settings = Depends(get_settings),
-    ) -> Response:
-    s3_client = get_s3_client(settings.s3_endpoint_url, settings.aws_region)
-
-    if authorization is None:
-        return Response(status_code=status.HTTP_401_UNAUTHORIZED, content='The authorization header must be present')
-
-    if not authorization.startswith('Bearer '):
-        return Response(status_code=status.HTTP_401_UNAUTHORIZED, content='The authorization header must start with "Bearer "')
-
-    if not secrets.compare_digest(
-        settings.token.get_secret_value().encode(),
-        base64.b64encode(hashlib.sha256(authorization.partition(' ')[2].strip().encode()).digest()),
+    for token_name, token_value, token_hashed in (
+        (os.environ['CDN_TOKEN_HTTP_HEADER_NAME'], headers.get(os.environ['CDN_TOKEN_HTTP_HEADER_NAME']), os.environ['CDN_TOKEN']),
+        ("authorization", headers.get("authorization"), os.environ['AUTH_TOKEN']),
     ):
-        return Response(status_code=status.HTTP_401_UNAUTHORIZED, content='The Bearer token is not correct')
+        if token_value is None:
+            return {
+                'statusCode': 401,
+                'body': f'The {token_name} header must be present',
+            }
+
+        if not token_value.startswith('Bearer '):
+            return {
+                'statusCode': 401,
+                'body': f'The {token_name} header must start with "Bearer "',
+            }
+
+        if not secrets.compare_digest(
+            token_hashed.encode(),
+            b64encode(hashlib.sha256(token_value.partition(' ')[2].strip().encode()).digest()),
+        ):
+            return {
+                'statusCode': 401,
+                'body': f'The Bearer token in {token_name} is not correct',
+            }
+
+    if method != 'POST':
+        return {
+            'statusCode': 405,
+            'body': 'Only POST is supported',
+        }
 
     if content_length is None:
-        return Response(status_code=status.HTTP_411_LENGTH_REQUIRED, content=b'The content-length header must be present')
+        return {
+            'statusCode': 411,
+            'body': 'The content-length header must be present',
+        }
 
     if int(content_length) > 10240:
-        return Response(status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, content=b'The request body must be less 10240 bytes')
+        return {
+            'statusCode': 413,
+            'body': 'The request body must be less 10240 bytes',
+        }
 
-    body = await request.body()
+    if body is None:
+        return {
+            'statusCode': 400,
+            'body': 'There must be a request body',
+        }
+
+    if not event.get('isBase64Encoded'):
+        return {
+            'statusCode': 500,
+            'body': 'Internal error: the request body has the wrong encoding',
+        }
+
+    body_bytes = b64decode(body)
     key = f'{datetime.now().isoformat()}-{uuid4()}'
+    s3_client.put_object(Bucket=os.environ['BUCKET'], Key=key, Body=body_bytes)
 
-    def upload():
-        s3_client.put_object(Bucket=settings.bucket, Key=key, Body=body)
-    await run_in_threadpool(upload)
-
-    return Response(status_code=status.HTTP_202_ACCEPTED, content=b'', media_type='text/plain')
+    return {
+        'statusCode': 202,
+        'headers': {
+            "Content-Type": "text/plain",
+        },
+        'body': '',
+    }
