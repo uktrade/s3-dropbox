@@ -12,8 +12,8 @@ This is a simple single-function dropbox. Payloads are expected to be small: a l
 ### Contents
 
 - [Authentication](#authentication)
-- [Environment variables](#environment-variables)
 - [Deployment](#deployment)
+- [Environment variables](#environment-variables)
 - [Permissions](#permissions)
 - [Running type checking and tests](#running-type-checking-and-tests)
 - [Running locally outside of tests](#running-locally-outside-of-tests)
