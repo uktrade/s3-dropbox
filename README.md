@@ -7,6 +7,19 @@ This is a simple single-function dropbox. Payloads are expected to be small: a l
 > [!TIP]
 > Looking for the FastAPI-based s3-dropbox? We moved away from that to AWS Lambda. You can access the [most recent FastAPI-based code in the git history](https://github.com/uktrade/s3-dropbox/commit/06248f6f15d75ddfd99d405f0382bff5a0d07e71).
 
+---
+
+### Contents
+
+- [Authentication](#authentication)
+- [Environment variables](#environment-variables)
+- [Deployment](#deployment)
+- [Permissions](#permissions)
+- [Running type checking and tests](#running-type-checking-and-tests)
+- [Running locally outside of tests](#running-locally-outside-of-tests)
+
+---
+
 
 ## Authentication
 
@@ -44,11 +57,11 @@ Deployment is fairly manual (AKA ClickOps):
 9. Set permissions on the execution role of the Lambda function as described below. 
 
 
-## Confguration
+## Environment variables
 
 Configuration is via environment variables.
 
-### Required environment variables
+### Environment variables
 
 - `BUCKET`
 
@@ -80,9 +93,9 @@ Configuration is via environment variables.
    These are technically required because boto3, the Python AWS SDK, uses them, they are automatically populated by the AWS Lambda environment, and so they would typically would only need to be explicitly set during testing outside of AWS Lambda.
 
 
-### IAM permissions
+## Permissions
 
-The only permission that the Lambda execution role needs (in addition to any usual logging permissions) is `s3:PutObject` on the bucket specified in the `BUCKET` environment variable.
+The only permission that the Lambda IAM execution role needs (in addition to any usual logging permissions) is `s3:PutObject` on the bucket specified in the `BUCKET` environment variable.
 
 
 ## Running type checking and tests
