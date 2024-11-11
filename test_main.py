@@ -143,6 +143,22 @@ def test_no_body(token, environment_variables) -> None:
     assert response['statusCode'] == 400
 
 
+def test_no_content_length(token, environment_variables) -> None:
+    token_client, token_server = token
+    response = lambda_handler({
+        "headers": {
+            "authorization": f'Bearer {token_client}',
+            "x-cdn-authorisation": "Bearer cdn_header_value"
+        },
+        "requestContext": {
+            "http": {
+                "method": "POST",
+            },
+        },
+    }, None)
+    assert response['statusCode'] == 411
+
+
 def test_body_non_base64_encoding(token, environment_variables) -> None:
     token_client, token_server = token
     content = uuid4().hex.encode()
