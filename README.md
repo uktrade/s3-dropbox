@@ -13,7 +13,8 @@ This is a simple single-function dropbox. Payloads are expected to be small: a l
 
 - [Authentication](#authentication)
 - [Deployment](#deployment)
-- [Environment variables](#environment-variables)
+- [Required environment variables](#required-environment-variables)
+- [Optional environment variables](#optional-environment-variables)
 - [Permissions](#permissions)
 - [Running type checking and tests](#running-type-checking-and-tests)
 - [Running locally outside of tests](#running-locally-outside-of-tests)
@@ -59,11 +60,9 @@ Deployment is fairly manual (AKA ClickOps):
 9. Set permissions on the execution role of the Lambda function as described below. 
 
 
-## Environment variables
+## Required environment variables
 
-Configuration is via environment variables.
-
-### Environment variables
+Configuration is via environment variables, and 4 are required to be explicitly set for s3-dropbox to function.
 
 - `BUCKET`
 
@@ -84,7 +83,9 @@ Configuration is via environment variables.
    The name of the HTTP header that contains the client token created by [create_token.py](./create_token.py). This is typically added by the CDN running in front of the Lambda Function URL, for example CloudFront.
 
 
-### Optional environment variables
+## Optional environment variables
+
+These environment variables can be used to configure s3-dropbox, but typically do not have to be explicitly set.
 
 - `S3_ENDPOINT_URL`
 
