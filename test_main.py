@@ -1,5 +1,7 @@
 import os
 import hashlib
+import re
+import subprocess
 from base64 import b64encode
 from datetime import datetime
 from typing import Generator, Tuple
@@ -253,3 +255,9 @@ def test_multiple_requests_at_the_same_time(token, environment_variables, s3_buc
     assert objects[0].get()['Body'].read() == content
     assert objects[1].key.startswith(now.isoformat())
     assert objects[1].get()['Body'].read() == content
+
+
+def test_create_token():
+    stdout = subprocess.run(['python', 'create_token.py'], stdout=subprocess.PIPE).stdout
+    assert re.match(rb'.*Client token \(plain text\):\s+\S{86}', stdout)
+    assert re.match(rb'.*Server token \(hashed client token\):\s+\S{44}', stdout, re.DOTALL)
