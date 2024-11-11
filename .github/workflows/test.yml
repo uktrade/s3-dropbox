@@ -27,7 +27,7 @@ jobs:
           mypy .
       - name: "Test"
         run: |
-          pytest
+          pytest --cov --cov-report=xml
       - name: "Stop minio"
         run: |
           ./stop-services.sh

@@ -1,4 +1,4 @@
-# s3-dropbox [![Proof](https://github.com/uktrade/s3-dropbox/actions/workflows/test.yml/badge.svg)](https://github.com/uktrade/s3-dropbox/actions/workflows/test.yml)
+# s3-dropbox [![Test suite](https://img.shields.io/github/actions/workflow/status/uktrade/s3-dropbox/test.yml?label=Test%20suite)](https://github.com/uktrade/s3-dropbox/actions/workflows/test.yml) [![Code coverage](https://img.shields.io/codecov/c/github/uktrade/s3-dropbox?label=Code%20coverage)](https://app.codecov.io/gh/uktrade/s3-dropbox)
 
 A bearer token authenticated dropbox that drops its payloads into an S3 bucket, designed to run as an AWS Lambda function via a Lambda Function URL.
 

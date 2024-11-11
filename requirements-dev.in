@@ -5,3 +5,4 @@ freezegun
 httpx
 mypy
 pytest
+pytest-cov

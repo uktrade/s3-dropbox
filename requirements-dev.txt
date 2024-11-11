@@ -23,6 +23,8 @@ certifi==2024.7.4
     # via
     #   httpcore
     #   httpx
+coverage[toml]==7.6.4
+    # via pytest-cov
 freezegun==1.2.2
     # via -r requirements-dev.in
 h11==0.14.0
@@ -53,6 +55,10 @@ packaging==23.0
 pluggy==1.0.0
     # via pytest
 pytest==7.2.1
+    # via
+    #   -r requirements-dev.in
+    #   pytest-cov
+pytest-cov==6.0.0
     # via -r requirements-dev.in
 python-dateutil==2.8.2
     # via
