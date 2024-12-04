@@ -65,13 +65,10 @@ def lambda_handler(event, context):
             'body': 'There must be a request body',
         }
 
-    if not event.get('isBase64Encoded'):
-        return {
-            'statusCode': 500,
-            'body': 'Internal error: the request body has the wrong encoding',
-        }
-
-    body_bytes = b64decode(body)
+    body_bytes = \
+        b64decode(body) if event.get('isBase64Encoded') else \
+        body.encode('utf-8')
+    
     key = f'{datetime.now().isoformat()}-{uuid4()}'
     s3_client.put_object(Bucket=os.environ['BUCKET'], Key=key, Body=body_bytes)
 
