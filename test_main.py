@@ -161,7 +161,7 @@ def test_no_content_length(token, environment_variables) -> None:
     assert response['statusCode'] == 411
 
 
-def test_body_non_base64_encoding(token, environment_variables) -> None:
+def test_body_non_base64_encoding(token, environment_variables, s3_bucket) -> None:
     token_client, token_server = token
     content = uuid4().hex.encode()
     content_encoded = b64encode(content).decode()
@@ -177,9 +177,14 @@ def test_body_non_base64_encoding(token, environment_variables) -> None:
             },
         },
         "isBase64Encoded": False,
-        "body": "",
+        "body": "Something non-base64-encoded",
     }, None)
-    assert response['statusCode'] == 500
+    assert response['statusCode'] == 202
+
+    objects = list(s3_bucket.objects.all())
+    assert len(objects) == 1
+    assert objects[0].key.startswith(datetime.now().isoformat()[:10])
+    assert objects[0].get()['Body'].read() == b'Something non-base64-encoded'
 
 
 def test_non_empty_body(token, environment_variables, s3_bucket) -> None:
